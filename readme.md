@@ -1,6 +1,6 @@
-# rt-bench
+# embed-bench
 
-`rt-bench` contains benchmark code to compare the following ML frameworks:
+`embed-bench` contains benchmark code to compare the following ML frameworks:
 
 - ggml
 - ggml on gpu
@@ -12,7 +12,7 @@
 Clone this repository with `git-lfs` installed:
 
 ```bash
-git clone https://github.com/bloopai/rt-bench
+git clone https://github.com/bloopai/embed-bench
 ```
 
 This should download necessary model & tokenizer files. You can now run
