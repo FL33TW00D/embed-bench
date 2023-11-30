@@ -23,12 +23,11 @@ pub fn bench_embedding(c: &mut Criterion) {
     let mut candle = Candle::new(true).unwrap();
     let mut embd = pollster::block_on(Embd::new()).unwrap();
 
-    /*
     group.bench_with_input(
         BenchmarkId::new("ggml_gpu_batched", 0),
         &CHUNKS,
         |b, chunks| b.iter(|| ggml_gpu.batch_embed(chunks)),
-    );*/
+    );
 
     group.bench_with_input(BenchmarkId::new("onnx", 0), &CHUNKS, |b, chunks| {
         b.iter(|| {

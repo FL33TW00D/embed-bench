@@ -287,7 +287,6 @@ impl Embd {
             .into_cpu(self.model.manager.handle())
             .await
             .unwrap();
-        let sliced = embeddings_cpu.slice(1, 0, 1).unwrap();
-        unsafe { Ok(sliced.into_vec()) }
+        unsafe { Ok(embeddings_cpu.into_vec()) }
     }
 }
