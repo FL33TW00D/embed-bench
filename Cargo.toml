@@ -7,10 +7,10 @@ edition = "2021"
 
 [dependencies]
 ort = { git = "https://github.com/bloopai/ort", branch = "env-builder-telemetry", features = ["load-dynamic"] }
-tokenizers = {version="=0.13.3", default-features=false, features=["onig"]}
+tokenizers = {version="=0.13.4", default-features=false, features=["onig"]}
 ndarray = "0.15"
 anyhow = "1.0.72"
-llm = { git = "https://github.com/bloopai/llm", branch = "batch-metal-kernels", default-features = false, features = ["bert"], optional = true }
+llm = { git = "https://github.com/bloopai/llm", branch = "batch-metal-kernels", default-features = false, features = ["bert"]}
 hf-hub = "0.2.0"
 candle-core = "0.1.2"
 candle-nn = "0.1.2"
@@ -19,6 +19,8 @@ serde = "1.0.186"
 serde_json = "1.0.105"
 libc = { version = "0.2.147" }
 accelerate-src = { version = "0.3.2" }
+pollster = "0.3.0"
+embd-core = { path = "../whisper-web/crates/embd-core" }
 
 [dev-dependencies]
 criterion = "0.3"

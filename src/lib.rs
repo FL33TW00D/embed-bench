@@ -10,6 +10,8 @@ use std::{path::PathBuf, sync::Arc};
 
 mod candle;
 use candle::{device, normalize_l2, BertModel, Config};
+use embd_core::bge::BGEModel;
+use tokenizers::{PaddingParams, PaddingStrategy, Tokenizer};
 
 pub struct Ort {
     tokenizer: tokenizers::Tokenizer,
@@ -224,7 +226,11 @@ impl Candle {
     }
 
     pub fn embed(&mut self, sequence: &str) -> anyhow::Result<Vec<f32>> {
-        let tokenizer = self.tokenizer.with_padding(None).with_truncation(None);
+        let tokenizer = self
+            .tokenizer
+            .with_padding(None)
+            .with_truncation(None)
+            .unwrap();
         let tokens = tokenizer
             .encode(sequence, true)
             .map_err(anyhow::Error::msg)?
@@ -238,5 +244,49 @@ impl Candle {
         let embeddings = (embeddings.sum(1)? / (n_tokens as f64))?;
         let embeddings = normalize_l2(&embeddings)?;
         Ok(embeddings.squeeze(0)?.to_vec1()?)
+    }
+}
+
+pub struct Embd {
+    model: BGEModel,
+    tokenizer: Tokenizer,
+}
+
+impl Embd {
+    pub async fn new() -> anyhow::Result<Self> {
+        let model_path =
+            PathBuf::from("/Users/fleetwood/Code/embed-bench/model/bge-small-en-v1.5-f32.bin");
+        let tokenizer_path =
+            PathBuf::from("/Users/fleetwood/Code/embed-bench/model/bge-tokenizer.json");
+        let bge = BGEModel::from_path(model_path).await.unwrap();
+        let tokenizer = Tokenizer::from_file(tokenizer_path).unwrap();
+
+        Ok(Embd {
+            model: bge,
+            tokenizer,
+        })
+    }
+
+    pub async fn batch_embed(&mut self, sequences: &[&str]) -> anyhow::Result<Vec<f32>> {
+        let encoded_batch = self
+            .tokenizer
+            .with_padding(Some(PaddingParams {
+                strategy: PaddingStrategy::BatchLongest,
+                pad_to_multiple_of: Some(4),
+                pad_id: 0,
+                ..Default::default()
+            }))
+            .encode_batch(sequences.to_vec(), true)
+            .unwrap();
+        let inputs = self.model.prepare_inputs(encoded_batch);
+
+        let mut result = self.model.model.run(inputs).await.unwrap();
+        let embeddings_gpu = result.remove(0);
+
+        let embeddings_cpu = embeddings_gpu
+            .into_cpu(self.model.manager.handle())
+            .await
+            .unwrap();
+        unsafe { Ok(embeddings_cpu.into_vec()) }
     }
 }

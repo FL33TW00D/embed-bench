@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
-use benches::{Acceleration, Candle, Ggml, Ort};
+use benches::{Acceleration, Candle, Embd, Ggml, Ort};
 
 static CHUNKS: [&str; 10] = [
   "impl RepoFile {\n    #[allow(clippy::too_many_arguments)]\n    fn build_document(\n        mut self,\n        schema: &File,\n        repo_name: &str,\n        relative_path: &Path,\n        repo_disk_path: &Path,\n        semantic_cache_key: String,\n        tantivy_cache_key: String,\n        entry_pathbuf: &Path,\n        repo_ref: &str,\n        last_commit: u64,\n        repo_metadata: &RepoMetadata,\n        file_cache: &FileCache,\n    ) -> Option<tantivy::schema::Document> {\n        let relative_path_str = relative_path.to_string_lossy().to_string();\n        #[cfg(windows)]\n        let relative_path_str = relative_path_str.replace('\\\\', \"/\");\n\n        let branches = self.branches.join(\"\\n\");\n        let lang_str = repo_metadata\n            .langs\n            ",
@@ -21,6 +21,7 @@ pub fn bench_embedding(c: &mut Criterion) {
     let mut ggml_gpu = Ggml::new(Acceleration::Gpu);
     let mut ggml = Ggml::new(Acceleration::None);
     let mut candle = Candle::new(true).unwrap();
+    let mut embd = pollster::block_on(Embd::new()).unwrap();
 
     group.bench_with_input(
         BenchmarkId::new("ggml_gpu_batched", 0),
@@ -31,7 +32,7 @@ pub fn bench_embedding(c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("onnx", 0), &CHUNKS, |b, chunks| {
         b.iter(|| {
             for c in chunks {
-                ort.embed(c);
+                let _ = ort.embed(c);
             }
         })
     });
@@ -39,7 +40,7 @@ pub fn bench_embedding(c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("ggml_gpu", 0), &CHUNKS, |b, chunks| {
         b.iter(|| {
             for c in chunks {
-                ggml_gpu.embed(c);
+                let _ = ggml_gpu.embed(c);
             }
         })
     });
@@ -47,7 +48,7 @@ pub fn bench_embedding(c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("ggml", 0), &CHUNKS, |b, chunks| {
         b.iter(|| {
             for c in chunks {
-                ggml.embed(c);
+                let _ = ggml.embed(c);
             }
         })
     });
@@ -55,9 +56,13 @@ pub fn bench_embedding(c: &mut Criterion) {
     group.bench_with_input(BenchmarkId::new("candle", 0), &CHUNKS, |b, chunks| {
         b.iter(|| {
             for c in chunks {
-                candle.embed(c);
+                let _ = candle.embed(c);
             }
         })
+    });
+
+    group.bench_with_input(BenchmarkId::new("embd", 0), &CHUNKS, |b, chunks| {
+        b.iter(|| pollster::block_on(embd.batch_embed(chunks)))
     });
 
     group.finish();
